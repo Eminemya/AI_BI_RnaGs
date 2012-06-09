@@ -1,0 +1,8 @@
+function y=seq2matlan(place)
+ind=find(place=='/');
+tmp=textread(place,'%s');
+seqq=tmp(2:);
+qqq=multialign(seqq,'terminalGapAdjust',true)
+dlmwrite([place(1:ind(end)) 'mat.aln'], qqq([1,2],:),'')
+
+end

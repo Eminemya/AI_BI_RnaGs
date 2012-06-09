@@ -1,0 +1,252 @@
+\documentclass{article}
+% Change "article" to "report" to get rid of page number on title page
+\usepackage{amsmath,amsfonts,amsthm,amssymb}
+\usepackage{setspace}
+\usepackage{Tabbing}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{extramarks}
+\usepackage{chngpage}
+\usepackage{soul,color}
+\usepackage{graphicx,float,wrapfig}
+\usepackage{multirow}
+
+% In case you need to adjust margins:
+\topmargin=-0.45in      %
+\evensidemargin=0in     %
+\oddsidemargin=0in      %
+\textwidth=6.5in        %
+\textheight=9.0in       %
+\headsep=0.25in         %
+
+% Homework Specific Information
+\newcommand{\hmwkTitle}{RNAG: Block Gibbs Sampler for RNA Secondary Structure Prediction}
+\newcommand{\hmwkClass}{}
+\newcommand{\hmwkAuthorName}{Donglai\ Wei, Lauren\ Alpert, Charles\ Lawrence}
+
+
+% Setup the header and footer
+\pagestyle{fancy}                                                       %
+\lhead{\hmwkAuthorName}                                                 %
+\rhead{\firstxmark}                                                     %
+\lfoot{\lastxmark}                                                      %
+\cfoot{}                                                                %
+\rfoot{Page\ \thepage\ of\ \pageref{LastPage}}                          %
+\renewcommand\headrulewidth{0.4pt}                                      %
+\renewcommand\footrulewidth{0.4pt}                                      %
+
+% This is used to trace down (pin point) problems
+% in latexing a document:
+%\tracingall
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\begin{enumerate}
+
+% Some tools
+\newcommand{\enterProblemHeader}[1]{\nobreak\extramarks{#1}{#1 continued on next page\ldots}\nobreak%
+                                    \nobreak\extramarks{#1 (continued)}{#1 continued on next page\ldots}\nobreak}%
+\newcommand{\exitProblemHeader}[1]{\nobreak\extramarks{#1 (continued)}{#1 continued on next page\ldots}\nobreak%
+                                   \nobreak\extramarks{#1}{}\nobreak}%
+
+\newlength{\labelLength}
+\newcommand{\labelAnswer}[2]
+  {\settowidth{\labelLength}{#1}%
+   \addtolength{\labelLength}{0.25in}%
+   \changetext{}{-\labelLength}{}{}{}%
+   \noindent\fbox{\begin{minipage}[c]{\columnwidth}#2\end{minipage}}%
+   \marginpar{\fbox{#1}}%
+
+   % We put the blank space above in order to make sure this
+   % \marginpar gets correctly placed.
+   \changetext{}{+\labelLength}{}{}{}}%
+
+\setcounter{secnumdepth}{0}
+\newcommand{\homeworkProblemName}{}%
+\newcounter{homeworkProblemCounter}%
+\newenvironment{homeworkProblem}[1][Problem \arabic{homeworkProblemCounter}]%
+  {\stepcounter{homeworkProblemCounter}%
+   \renewcommand{\homeworkProblemName}{#1}%
+   \section{\homeworkProblemName}%
+   \enterProblemHeader{\homeworkProblemName}}%
+  {\exitProblemHeader{\homeworkProblemName}}%
+
+\newcommand{\problemAnswer}[1]
+  {\noindent\fbox{\begin{minipage}[c]{\columnwidth}#1\end{minipage}}}%
+
+\newcommand{\problemLAnswer}[1]
+  {\labelAnswer{\homeworkProblemName}{#1}}
+
+\newcommand{\homeworkSectionName}{}%
+\newlength{\homeworkSectionLabelLength}{}%
+\newenvironment{homeworkSection}[1]%
+  {% We put this space here to make sure we're not connected to the above.
+   % Otherwise the changetext can do funny things to the other margin
+
+   \renewcommand{\homeworkSectionName}{#1}%
+   \settowidth{\homeworkSectionLabelLength}{\homeworkSectionName}%
+   \addtolength{\homeworkSectionLabelLength}{0.25in}%
+   \changetext{}{-\homeworkSectionLabelLength}{}{}{}%
+   \subsection{\homeworkSectionName}%
+   \enterProblemHeader{\homeworkProblemName\ [\homeworkSectionName]}}%
+  {\enterProblemHeader{\homeworkProblemName}%
+
+   % We put the blank space above in order to make sure this margin
+   % change doesn't happen too soon (otherwise \sectionAnswer's can
+   % get ugly about their \marginpar placement.
+   \changetext{}{+\homeworkSectionLabelLength}{}{}{}}%
+
+\newcommand{\sectionAnswer}[1]
+  {% We put this space here to make sure we're disconnected from the previous
+   % passage
+
+   \noindent\fbox{\begin{minipage}[c]{\columnwidth}#1\end{minipage}}%
+   \enterProblemHeader{\homeworkProblemName}\exitProblemHeader{\homeworkProblemName}%
+   \marginpar{\fbox{\homeworkSectionName}}%
+
+   % We put the blank space above in order to make sure this
+   % \marginpar gets correctly placed.
+   }%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Make title
+\title{\vspace{0.3in}\textmd{\textbf{\hmwkTitle}}}
+\date{2010.9.16}
+\author{\textbf{\hmwkAuthorName}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+\begin{spacing}{1.1}
+\maketitle
+\section{0.Welcome}
+\section{1.Preparation:Packages to Install}
+\subsection{1.1 Alignment Initialization: Probcons}
+\small{http://probcons.stanford.edu/download.html}\\\\
+Command Line: \emph{.$/$probcons input$\_$file $>$output$\_$file} \\ 
+Input Format: FASTA\\
+Output Format: CLUSTALW/plain-text
+\subsection{1.2 Structure Sampler given Alignment: RNAalifold(Vienna Package)}
+\small{http://www.tbi.univie.ac.at/RNA/}\\\\
+Command Line: \emph{RNAalifold input$\_$file $>$output$\_$file} \\ 
+Input Format: CLUSTALW\\
+Output Format: Vienna
+\subsection{1.3 Alignment Sampler given Structure: Covariance Model(Inferno Package)}
+\small{http://infernal.janelia.org/}\\\\
+a) Build CM model:\\
+Command Line: \emph{cmbuild -F output$\_$file input$\_$file}  \\ 
+Input Format: Stockholm\\
+Output Format: CM\\ \\
+b) Sample the multiple alignment:\\
+Command Line: \emph{cmalign $--$sample input$\_$file1 input$\_$file2 $>$output$\_$file} \\ 
+Input Format: 1:CM  2:FASTA\\
+Output Format: Vienna
+
+\section{2.Block Gibbs Sampler:Python Code}
+\subsection{2.1{\bf Main Function:} B$\_$GS$\_$main.py}
+B$\_$GS(seq$\_$file,R$\_$Dir,C$\_$Dir,iteration,P$\_$Dir)\\
+{\bf Input:} 
+\begin{enumerate}
+ \item seq$\_$file: path of the sequence file
+ \item R$\_$Dir: path of the RNAalifold function
+ \item C$\_$Dir: path of the Infernal/src
+ \item iteration:number of iterations
+ \item P$\_$Dir:path of probcons.exe
+\end{enumerate}
+{\bf Output:}
+\begin{enumerate}
+ \item 00aln:$\#$iteration+1 samples of the multiple alignment
+ \item 00str:$\#$iteration samples of the consensus structure
+ \item project$\_$i.str:project the consensus structures in 00str onto the ith sequence 
+\end{enumerate}
+
+\subsection{2.2{\bf Util Function} B$\_$GS$\_$util.py}
+Essentials:
+\subsubsection{2.2.1 Format Parser during Iteration}
+\begin{enumerate}
+ \item $Ini\_aln$: Alignment Initialization with PROBCONS
+ \item $Aln\_aln$: Translate the plain-text format of alignment from PROBCONS into ClustalW format
+ \item $Alifold\_sto$: Translate the plain-text format of structure from RNAalifold into Stockholm format
+ \item $CM\_aln$: Translate the structural alignment from cmalign into ClustalW format
+\end{enumerate}
+\subsubsection{2.2.2 Data Analysis}
+\begin{enumerate}
+\item $project\_strus$:project the consensus structures in 00str onto one certain sequence 
+\item $sta$: calculate sensitivity and PPV for the estimator
+\item $cal\_roc$: calculate the points on the ROC curve
+\end{enumerate}
+\subsection{2.3 {\bf Cluster Analysis} $hier\_clus.m$}
+\begin{enumerate}
+\item Bias-Variance: based on the hamming distance between sampled strutures and the reference one
+\item Hierarchical Clustering:using CH-index to determine number of clusters
+\item $\gamma$-Centroid Estimator: implement Nussinov-type DP algorithm
+\end{enumerate}
+
+\subsection{2.3 Paralellization}
+\begin{enumerate}
+\item $para.py$: paralell computing on ccmb
+\end{enumerate}
+
+
+\section{3.Test Cases}
+\subsection{3.1: Man-or-Boy test}
+In the test folder are:\\
+1) two homologous squences from tRNA in fasta format\\
+2) their reference structure from Rfam\\
+3) the python script.\\ \\
+Firsly, You need to specify the path for other packages in the script.py. \\ \\
+Then cd into the test folder and type \emph{python script.py} in the terminal.
+\subsection{3.2: Comprehensive test on Kiryu's dataset}
+In order to reproduce the result shown in the paper, 
+we here provide the wrapper for doing RNAG on 85 subalignments of 10 homologous sequences from 17 RNA families.
+Everything is included in the "Initial.py"
+\section{4.Test Data}
+In order to facilitate comparisons for future RNA align-fold algorithms, we sort out the MASTR dataset, BRAliBASE II dataset and Murlet dataset in a consistent organization. Each of the three datasets has a folder with two subfolders “seq” and “str” to store original sequences in ‘.fa’ format and structural alignments with consensus structures in ‘.str’ format respectively. Inside the “seq” and “str” folders, subfolders of concerned RNA families group the “.fa” and “.str” files.\\
+Additionally, all of the “.fa” and “.str” files are saved in a matlab file called “data.mat”, which is easy to load and output in desired format for later use. Below, we give a top-down view of the hierarchy of the data structure in “data.mat”.
+\begin{enumerate}
+\item In “data.mat”, there are three dataset variables, “mastr”, ”bralise” and “kiryu” 
+\item Each dataset variable has attributes: 
+\begin{enumerate}
+\item numfam: (int) number of families concerned in the dataset
+\item totaltest: (int) total number of test cases in the dataset
+\item totalseq: (int) total number of RNA sequences in the dataset
+\item numtest: (int vector) number of test cases in each RNA family
+\item numseq: (int vector) number of RNA sequences in each RNA family
+\item avglen: (double vector) average length of RNA sequences in each RNA family
+\item fam: (struct vector) RNA family variables
+\end{enumerate}
+\item Each RNA family variable has attributes: 
+\begin{enumerate}
+\item name: (string) RNA family name
+\item id: (int) index in the dataset
+\item numtest: (int) number of test cases in the RNA family
+\item avglen: (double vector) average length of RNA sequences in each RNA family
+\item numseq: (int vector) number of RNA sequences in each test case
+\item tests: (struct vector) test case variables
+\end{enumerate}
+\item Each test case variable has attributes: 
+\begin{enumerate}
+\item numseq: (int vector) number of RNA sequences in the test case
+\item avglen: (double) average length of RNA sequences in the test case
+\item constr: (string) consensus structure in the test case
+\item seq: (struct vector) sequence variable
+\end{enumerate}
+\begin{enumerate}
+\item Each test case variable has attributes: 
+\item name:(string) name of the RNA sequence
+\item Sequence: (string) original ungapped RNA sequence
+\item aln: (string) structural alignment of the RNA sequence
+\item str:(string) projected secondary structure for the ungapped RNA sequence from consensus structure
+\end{enumerate}
+\end{enumerate}
+\section{5.Acknowledgement}
+{\bf Donglai:}\\
+Thanks Chip, who opened me the door to the amazing world of computational statistics, 
+Bill who has always been helpful ever since I was a green hand on matlab 
+and all my labmates who have shared pleasant years of lab meetings together.
+Also, as usual, special thanks go to my forever loving family, especially Zoe.\\
+\end{spacing}
+\end{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

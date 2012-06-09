@@ -1,0 +1,29 @@
+function y=find_dis(seq,cluster)
+
+if(cluster==1)
+for i=1:length(seq)
+for j=i+1:length(seq)
+
+
+
+
+end
+end
+else
+%compare with the first one
+for j=i+1:length(seq)
+
+
+
+
+end
+
+for j=2:length(seq)
+
+
+end
+
+end
+
+
+end
